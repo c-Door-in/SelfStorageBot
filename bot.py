@@ -52,6 +52,8 @@ def start(update, context):
 
 
 def check_store(update, context):
+    user = update.message.from_user
+    logger.info("User %s chooses %s warehouse", user.first_name, update.message.text)
     for warehouse in get_records(Warehouses):
         if warehouse.title == update.message.text:
             context.user_data['current_warehouse'] = update.message.text
@@ -81,6 +83,8 @@ def what_to_store(update, context):
 
 
 def season_stuff(update, context):
+    user = update.message.from_user
+    logger.info("User %s chooses season stuff", user.first_name)
     reply_text = 'Уточните'
     reply_keyboard = [
         ['Лыжи', 'Сноуборд', 'Велосипед', 'Колеса'],
@@ -99,6 +103,8 @@ def season_stuff(update, context):
 def check_season_stuff(update, context):
     if update.message.text != 'Назад':
         context.user_data['current_season_stuff'] = update.message.text
+        user = update.message.from_user
+        logger.info("User %s chooses %s to store", user.first_name, update.message.text)
     reply_text = 'Укажите количество'
     reply_keyboard = [
         ['Назад', 'Главное меню'],
@@ -114,6 +120,8 @@ def check_season_stuff(update, context):
 
 
 def confirm_season_stuff(update, context):
+    user = update.message.from_user
+    logger.info("User %s chooses %s things to store", user.first_name, update.message.text)
     context.user_data['current_season_stuff_number'] = update.message.text
     current_season_stuff = context.user_data['current_season_stuff']
     reply_text = (
@@ -128,6 +136,8 @@ def confirm_season_stuff(update, context):
 def other_stuff(update, context):
     if update.message.text != 'Назад':
         context.user_data['other_stuff'] = True
+        user = update.message.from_user
+        logger.info("User %s chooses some stuff to store", user.first_name)
     reply_text = (
         'Условия хранения... '
         '1 кв.м. - 599 руб. Каждый дополнительный - 150 руб. '
@@ -148,6 +158,8 @@ def other_stuff(update, context):
 
 def storage_period(update, context):
     if 'other_stuff' in context.user_data:
+        user = update.message.from_user
+        logger.info("User %s chooses %s things to store", user.first_name, update.message.text)
         context.user_data['other_stuff_number'] = update.message.text
         reply_text = (
         'Выберете период хранения в месяцах'
@@ -173,6 +185,8 @@ def storage_period(update, context):
 
 
 def summary_stuff(update, context):
+    user = update.message.from_user
+    logger.info("User %s chooses %s as storage period", user.first_name, update.message.text)
     reply_text = 'Вы выбрали...'
     reply_keyboard = [
         ['Забронировать'],
