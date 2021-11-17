@@ -21,13 +21,15 @@ Orders = Base.classes.orders
 session = Session(engine)
 
 def get_records(table, filter={}):
-    # recordset = session.execute('SELECT * FROM v_storages')
-    # for row in recordset:
-    #    pass
     if filter:
         return session.query(table).filter_by(**filter).all()
     return session.query(table).all()
-    
+
+
+def get_records_sql(sql):
+    recordset = session.execute(sql)
+    return([row._asdict() for row in recordset])
+
 
 def add_client(context_data):
     new_client = Clients(
