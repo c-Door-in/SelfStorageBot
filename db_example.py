@@ -33,3 +33,13 @@ print(
                 })
 )
 """
+print(
+    add_order({'title': 'Заказ важный',
+                'client_id': 2,
+                'storage_id': 3, # 1 - сезонныем 
+                'box_id': 12,
+                'rent_from': datetime.date(2021, 10, 17),
+                'rent_to': datetime.date(2021, 12, 17),
+                'description': 'Описание'
+                })
+)
