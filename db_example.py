@@ -1,73 +1,35 @@
 import datetime
-
-from sqlalchemy.engine import base
-from sqlalchemy.ext.automap import automap_base
-from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
-
-Base = automap_base()
-
-engine = create_engine(r"sqlite:///SelfStorage.db")
-
-Base.prepare(engine, reflect=True)
-
-Warehouses = Base.classes.warehouses
-Boxes = Base.classes.boxes
-Clients = Base.classes.clients
-Storages = Base.classes.storages
-Prices = Base.classes.prices
-Orders = Base.classes.orders
-
-session = Session(engine)
-
-def get_warehouses():
-    return session.query(Warehouses).all()
+from db_helpers import Warehouses, Boxes, Clients, Storages, Prices, Orders
+from db_helpers import get_records, add_client, add_order
 
 
-def get_clients():
-    return session.query(Clients).all()
+# Прайс по фильтру (опционально), возвращает список строк, строка словарь
+filter = {'title': 'Склад Юг'}
+for row in get_records(Warehouses, filter):
+    print(row.id, row.title, row.__dict__)
 
+"""
 
-def get_boxes():
-    return session.query(Boxes).all()
+# Добавление нового клиента, возвращает id
+print(
+    add_client({'title': 'Клиент 5',
+                'fio': 'Фамилия',
+                'phone': '+71234567890',
+                'pass_id': '0123456789',
+                'birth_date': datetime.date(1995, 10, 25),
+                'description': 'Описание'
+                })
+)
 
-
-def get_storages():
-    return session.query(Storages).all()
-
-
-def get_prices(**kwargs):
-    return session.query(Prices).filter_by().all()
-
-
-def get_orders():
-    return session.query(Orders).all()
-
-
-def add_client(context_data):
-    new_client = Clients(
-                    title = context_data['title'],
-                    fio = context_data['fio'],
-                    phone = context_data['phone'],
-                    pass_id = context_data['pass_id'],
-                    birth_date = context_data['birth_date'],
-                    description = context_data['description'],
-                )
-    session.add(new_client)
-    session.commit()
-    return new_client.id
-
-
-def add_order(context_data):
-    new_order = Orders(
-                    title = context_data['title'],
-                    client_id = context_data['client_id'],
-                    storage_id = context_data['storage_id'],
-                    box_id = context_data['box_id'],
-                    rent_from = context_data['rent_from'],
-                    rent_to = context_data['rent_to'],
-                    description = context_data['description'],
-                )
-    session.add(new_order)
-    session.commit()
-    return new_order.id
+# Добавление нового заказа, возвращает id
+print(
+    add_order({'title': 'Заказ важный',
+                'client_id': 2,
+                'storage_id': 3,
+                'box_id': 12,
+                'rent_from': datetime.date(2021, 10, 17),
+                'rent_to': datetime.date(2021, 12, 17),
+                'description': 'Описание'
+                })
+)
+"""

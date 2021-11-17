@@ -20,29 +20,11 @@ Orders = Base.classes.orders
 
 session = Session(engine)
 
-def get_warehouses():
-    return session.query(Warehouses).all()
-
-
-def get_clients():
-    return session.query(Clients).all()
-
-
-def get_boxes():
-    return session.query(Boxes).all()
-
-
-def get_storages():
-    return session.query(Storages).all()
-
-
-def get_prices(**kwargs):
-    return session.query(Prices).filter_by().all()
-
-
-def get_orders():
-    return session.query(Orders).all()
-
+def get_records(table, filter={}):
+    if filter:
+        return session.query(table).filter_by(**filter).all()
+    return session.query(table).all()
+    
 
 def add_client(context_data):
     new_client = Clients(
