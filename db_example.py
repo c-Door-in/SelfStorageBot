@@ -3,7 +3,7 @@ from db_helpers import Warehouses, Boxes, Clients, Storages, Prices, Orders
 from db_helpers import get_records, add_client, add_order
 
 
-# Прайс по фильтру (опционально), возвращает список строк, строка словарь
+# Таблица, фильтр (опционально). Возвращает список строк, строка словарь
 filter = {'title': 'Склад Юг'}
 for row in get_records(Warehouses, filter):
     print(row.id, row.title, row.__dict__)
