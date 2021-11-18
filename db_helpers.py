@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 
 Base = automap_base()
 
-engine = create_engine(r"sqlite:///c:\DEV\PYTHON\APP\PY10\dvmn\SelfStorageBot\SelfStorage.db")
+engine = create_engine(r"sqlite:///SelfStorage.db")
 
 Base.prepare(engine, reflect=True)
 
