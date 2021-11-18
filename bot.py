@@ -25,6 +25,8 @@ STORES, WHAT_TO_STORE, SEASON_STUFF, CHECK_SEASON_STUFF, OTHER_STUFF, STORAGE_PE
 
 PERSONAL_FIO, PERSONAL_PHONENUMBER, PERSONAL_PASSPORT, PERSONAL_BIRTHDATE = range(7, 11)
 
+PAYMENT, COMPLETE = range(11, 13)
+
 
 def start(update, context):
     # user = get_user(update.message.from_user.id)
@@ -288,6 +290,49 @@ def personal_birthdate(update, context):
     return PERSONAL_BIRTHDATE
 
 
+def payment(update, context):
+    if update.message.text != 'Назад':
+        user = update.message.from_user
+        logger.info("User %s's birth_date is '%s'", user.first_name, update.message.text)
+        context.user_data['birth_date'] = update.message.text
+    reply_text = 'К оплате ...'
+    reply_keyboard = [
+        ['Оплатить'],
+        ['Назад', 'Главное меню'],
+    ]
+    update.message.reply_text(
+        reply_text,
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard,
+            resize_keyboard=True,
+        ),
+    )
+    return PAYMENT
+
+
+def complete(update, context):
+    user = update.message.from_user
+    logger.info("User %s's birth_date is '%s'", user.first_name, update.message.text)
+    # TODO Подбить заказ и отправить в базу. context.user_data
+    # TODO update.message.reply_photo() Выложить QR-код
+    reply_text = (
+        'Спасибо за бронирование, оплата принята./n'
+        'Вот ваш электронный ключ для доступа к вашему личному складу. '
+        'Вы сможете попасть на склад в любое время в период с по'
+    )
+    reply_keyboard = [
+        ['Главное меню'],
+    ]
+    update.message.reply_text(
+        reply_text,
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard,
+            resize_keyboard=True,
+        ),
+    )
+    return ConversationHandler.END
+
+
 def incorrect_input(update, context):
     update.message.reply_text(
         'Я вас не понимаю \U0001F61F\n\n'
@@ -354,11 +399,13 @@ def main():
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
                 MessageHandler(Filters.regex('^Назад$'), what_to_store),
                 MessageHandler(Filters.regex('^Календарь$'), summary_stuff),
+                MessageHandler(Filters.text, incorrect_input),
             ],
             SUMMARY_STUFF: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
                 MessageHandler(Filters.regex('^Назад$'), storage_period),
                 MessageHandler(Filters.regex('^Забронировать$'), personal_fio),
+                MessageHandler(Filters.text, incorrect_input),
             ],
             PERSONAL_FIO: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
@@ -376,6 +423,17 @@ def main():
                 MessageHandler(Filters.text, personal_birthdate),
             ],
             PERSONAL_BIRTHDATE: [
+                MessageHandler(Filters.regex('^Главное меню$'), main_menu),
+                MessageHandler(Filters.regex('^Назад$'), personal_passport),
+                MessageHandler(Filters.text, payment),
+            ],
+            PAYMENT: [
+                MessageHandler(Filters.regex('^Главное меню$'), main_menu),
+                MessageHandler(Filters.regex('^Назад$'), personal_passport),
+                MessageHandler(Filters.regex('^Оплатить$'), complete),
+                MessageHandler(Filters.text, incorrect_input),
+            ],
+            COMPLETE: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
                 MessageHandler(Filters.regex('^Назад$'), personal_passport),
                 MessageHandler(Filters.text, exit),
