@@ -315,8 +315,9 @@ def complete(update, context):
     logger.info("User %s's birth_date is '%s'", user.first_name, update.message.text)
     # TODO Подбить заказ и отправить в базу. context.user_data
     # TODO update.message.reply_photo() Выложить QR-код
+    # TODO Задать переменные для периода start_date, finish_date
     reply_text = (
-        'Спасибо за бронирование, оплата принята./n'
+        'Спасибо за бронирование, оплата принята.\n'
         'Вот ваш электронный ключ для доступа к вашему личному складу. '
         'Вы сможете попасть на склад в любое время в период с по'
     )
