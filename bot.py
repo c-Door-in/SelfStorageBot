@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 STORES, WHAT_TO_STORE, SEASON_STUFF, CHECK_SEASON_STUFF, OTHER_STUFF, STORAGE_PERIOD, SUMMARY_STUFF = range(7)
 
+PERSONAL_FIO, PERSONAL_PHONENUMBER, PERSONAL_PASSPORT, PERSONAL_BIRTHDATE = range(7, 11)
+
 
 def start(update, context):
     # user = get_user(update.message.from_user.id)
@@ -38,13 +40,15 @@ def start(update, context):
         'для хранения вещей. Давайте посмотрим адреса складов, '
         'чтобы выбрать ближайший!'
     )
-    reply_keyboard = [
-        ['Склад левый берег', 'Склад Юг', 'Склад Запад', 'Склад Север']
-    ]
+    main_menu(update, context, reply_text)
+    return STORES
+
+
+def main_menu(update, context, reply_text='Вы в главном меню'):
     update.message.reply_text(
         reply_text,
         reply_markup=ReplyKeyboardMarkup(
-            reply_keyboard,
+            [['Склад левый берег', 'Склад Юг', 'Склад Запад', 'Склад Север']],
             resize_keyboard=True,
         ),
     )
@@ -53,7 +57,7 @@ def start(update, context):
 
 def check_store(update, context):
     user = update.message.from_user
-    logger.info("User %s chooses %s warehouse", user.first_name, update.message.text)
+    logger.info("User %s chooses %s as warehouse", user.first_name, update.message.text)
     for warehouse in get_records(Warehouses):
         if warehouse.title == update.message.text:
             context.user_data['current_warehouse'] = update.message.text
@@ -158,18 +162,20 @@ def other_stuff(update, context):
 
 def storage_period(update, context):
     if 'other_stuff' in context.user_data:
-        user = update.message.from_user
-        logger.info("User %s chooses %s things to store", user.first_name, update.message.text)
-        context.user_data['other_stuff_number'] = update.message.text
+        if update.message.text != 'Назад':
+            user = update.message.from_user
+            logger.info("User %s chooses %s things to store", user.first_name, update.message.text)
+            context.user_data['other_stuff_number'] = update.message.text
         reply_text = (
         'Выберете период хранения в месяцах'
     )
     else:
-        reply_text = (
-            'Выберете период хранения. '
-            'От 1 недели для лыж, сноуборда, велосипеда. '
-            'От 1 месяца для шин'
-        )
+        if update.message.text != 'Назад':
+            reply_text = (
+                'Выберете период хранения. '
+                'От 1 недели для лыж, сноуборда, велосипеда. '
+                'От 1 месяца для шин'
+            )
     reply_keyboard = [
         ['Календарь'],
         ['Назад', 'Главное меню'],
@@ -185,8 +191,9 @@ def storage_period(update, context):
 
 
 def summary_stuff(update, context):
-    user = update.message.from_user
-    logger.info("User %s chooses %s as storage period", user.first_name, update.message.text)
+    if update.message.text != 'Назад':
+        user = update.message.from_user
+        logger.info("User %s chooses %s as storage period", user.first_name, update.message.text)
     reply_text = 'Вы выбрали...'
     reply_keyboard = [
         ['Забронировать'],
@@ -202,15 +209,83 @@ def summary_stuff(update, context):
     return SUMMARY_STUFF
 
 
-def main_menu(update, context, reply_text='Вы в главном меню'):
+def personal_fio(update, context):
+    if update.message.text != 'Назад':
+        user = update.message.from_user
+        logger.info("User %s has confirmed an order", user.first_name)
+    reply_text = 'Введите ФИО.'
+    reply_keyboard = [
+        ['Назад', 'Главное меню'],
+    ]
     update.message.reply_text(
         reply_text,
         reply_markup=ReplyKeyboardMarkup(
-            [['Склад левый берег', 'Склад Юг', 'Склад Запад', 'Склад Север']],
+            reply_keyboard,
             resize_keyboard=True,
+            input_field_placeholder='Иванов Иван Иванович',
         ),
     )
-    return STORES
+    return PERSONAL_FIO
+
+
+def personal_phonenumber(update, context):
+    if update.message.text != 'Назад':
+        user = update.message.from_user
+        logger.info("User %s's full name is '%s'", user.first_name, update.message.text)
+        context.user_data['fio'] = update.message.text
+    reply_text = 'Введите номер телефона.'
+    reply_keyboard = [
+        ['Назад', 'Главное меню'],
+    ]
+    update.message.reply_text(
+        reply_text,
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard,
+            resize_keyboard=True,
+            input_field_placeholder='987 654 3210',
+        ),
+    )
+    return PERSONAL_PHONENUMBER
+
+
+def personal_passport(update, context):
+    if update.message.text != 'Назад':
+        user = update.message.from_user
+        logger.info("User %s's phone is '%s'", user.first_name, update.message.text)
+        context.user_data['phone'] = update.message.text
+    reply_text = 'Введите серию и номер паспорта.'
+    reply_keyboard = [
+        ['Назад', 'Главное меню'],
+    ]
+    update.message.reply_text(
+        reply_text,
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard,
+            resize_keyboard=True,
+            input_field_placeholder='1234 567890',
+        ),
+    )
+    return PERSONAL_PASSPORT
+
+
+def personal_birthdate(update, context):
+    if update.message.text != 'Назад':
+        user = update.message.from_user
+        logger.info("User %s's pass_id is '%s'", user.first_name, update.message.text)
+        context.user_data['pass_id'] = update.message.text
+    reply_text = 'Введите дату рождения.'
+    reply_keyboard = [
+        ['Назад', 'Главное меню'],
+    ]
+    update.message.reply_text(
+        reply_text,
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard,
+            resize_keyboard=True,
+            input_field_placeholder='дд.мм.гггг',
+        ),
+    )
+    return PERSONAL_BIRTHDATE
 
 
 def incorrect_input(update, context):
@@ -283,7 +358,27 @@ def main():
             SUMMARY_STUFF: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
                 MessageHandler(Filters.regex('^Назад$'), storage_period),
-                MessageHandler(Filters.regex('^Забронировать$'), exit),
+                MessageHandler(Filters.regex('^Забронировать$'), personal_fio),
+            ],
+            PERSONAL_FIO: [
+                MessageHandler(Filters.regex('^Главное меню$'), main_menu),
+                MessageHandler(Filters.regex('^Назад$'), summary_stuff),
+                MessageHandler(Filters.text, personal_phonenumber),
+            ],
+            PERSONAL_PHONENUMBER: [
+                MessageHandler(Filters.regex('^Главное меню$'), main_menu),
+                MessageHandler(Filters.regex('^Назад$'), personal_fio),
+                MessageHandler(Filters.text, personal_passport),
+            ],
+            PERSONAL_PASSPORT: [
+                MessageHandler(Filters.regex('^Главное меню$'), main_menu),
+                MessageHandler(Filters.regex('^Назад$'), personal_phonenumber),
+                MessageHandler(Filters.text, personal_birthdate),
+            ],
+            PERSONAL_BIRTHDATE: [
+                MessageHandler(Filters.regex('^Главное меню$'), main_menu),
+                MessageHandler(Filters.regex('^Назад$'), personal_passport),
+                MessageHandler(Filters.text, exit),
             ],
         },
         fallbacks=[CommandHandler('exit', exit)],
