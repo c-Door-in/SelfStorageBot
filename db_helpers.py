@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 
 Base = automap_base()
 
-engine = create_engine(r"sqlite:///SelfStorage.db")
+engine = create_engine(r"sqlite:///c:\DEV\PYTHON\APP\PY10\dvmn\SelfStorageBot\SelfStorage.db")
 
 Base.prepare(engine, reflect=True)
 
@@ -53,7 +53,7 @@ def add_order(context_data):
         title=context_data['title'],
         order_date=context_data['order_date'],
         client_id=context_data['client_id'],
-        storage_id=context_data['storage_id'],
+        price_id=context_data['price_id'],
         storage_cnt=context_data['storage_cnt'],
         wrh_id=context_data['wrh_id'],
         rent_from=context_data['rent_from'],

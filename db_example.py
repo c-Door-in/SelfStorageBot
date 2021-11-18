@@ -74,14 +74,14 @@ print(
 )
 """
 print(
-    add_order({'title': 'Заказ важный',
-                'order_date': datetime.date(2021, 10, 1),
-                'client_id': 2,
-                'storage_id': 3,
-                'storage_cnt': 4,
-                'wrh_id': 1,
-                'rent_from': datetime.date(2021, 10, 17),
-                'rent_to': datetime.date(2021, 12, 17),
+    add_order({'title': 'Заказ, 2 велосипеда северный склад',
+                'order_date': datetime.date(2021, 9, 15),
+                'client_id': 1,
+                'price_id': 4,
+                'storage_cnt': 2,
+                'wrh_id': 4,
+                'rent_from': datetime.date(2021, 9, 15),
+                'rent_to': datetime.date(2021, 12, 15),
                 'description': 'Описание'
                 })
 )
