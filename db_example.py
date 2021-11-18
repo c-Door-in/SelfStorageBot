@@ -1,9 +1,19 @@
 import datetime
-
+import os 
 from db_helpers import Warehouses, Boxes, Clients, Storages, Prices, Orders
-from db_helpers import get_records, get_records_sql, add_client, add_order
+from db_helpers import get_records, get_records_sql, add_client, add_order, generate_qr, add_t_order
 
-
+context_data = {
+    'user_id': 706609141,
+    'current_warehouse': 'Склад Юг',
+    'current_season_stuff': 'Лыжи',
+    'current_season_stuff_number': 3,
+    'fio': 'Петров',
+    'phone': '9899898989',
+    'pass_id': '5555555555',
+    'birth_date': datetime.date(1995, 10, 25)
+}
+# print(add_t_order(context_data))
 
 """ Таблица, фильтр (опционально). Возвращает список строк, строка словарь
 filter = {'title': 'Склад Юг'}
@@ -18,18 +28,6 @@ for row in get_records(Clients):
 title = 'сноуборд за место'
 period = 'неделя'
 print(get_records_sql(f"SELECT * FROM v_prices WHERE title = '{title}' AND period = '{period}'"))
-
-''' С прайсом работать через произвольный запрос к view "v_prices":
-id	title	period	price	storage_id	storage_title	storage_path
-1	4 колеса	месяц	400	2	колёса	сезонные/колёса
-2	лыжи за место	месяц	300	3	лыжи	сезонные/лыжи
-3	лыжи за место	неделя	100	3	лыжи	сезонные/лыжи
-4	велосипед за место	месяц	400	5	велосипед	сезонные/велосипед
-5	велосипед за место	неделя	150	5	велосипед	сезонные/велосипед
-6	сноуборд за место	месяц	300	4	сноуборд	сезонные/сноуборд
-7	сноуборд за место	неделя	100	4	сноуборд	сезонные/сноуборд
-8	за 1 кв. метр	месяц	599	6	другое	другое
-'''
 
 # Произвольный запрос на выборку
 print(get_records_sql('SELECT * FROM v_prices'))
@@ -62,18 +60,6 @@ print(
 
 # Добавление нового заказа, возвращает id
 print(
-    add_order({'title': 'Заказ важный',
-                'order_date': datetime.date(2021, 10, 1),
-                'client_id': 2,
-                'storage_id': 3,
-                'wrh_id': 1,
-                'rent_from': datetime.date(2021, 10, 17),
-                'rent_to': datetime.date(2021, 12, 17),
-                'description': 'Описание'
-                })
-)
-"""
-print(
     add_order({'title': 'Заказ, 2 велосипеда северный склад',
                 'order_date': datetime.date(2021, 9, 15),
                 'client_id': 1,
@@ -85,3 +71,7 @@ print(
                 'description': 'Описание'
                 })
 )
+
+"""
+img = generate_qr({'order_id': 22, 'fio': 'fio'})
+img.save(os.path.join(os.getcwd(), "qr", f'qr_{22}.png'))

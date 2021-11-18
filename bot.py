@@ -1,4 +1,6 @@
+import datetime
 import logging
+import os
 
 from environs import Env
 from telegram import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
@@ -11,7 +13,7 @@ from telegram.ext import (
 )
 
 from db_helpers import Warehouses, Boxes, Clients, Storages, Prices, Orders
-from db_helpers import get_records, add_client, add_order
+from db_helpers import get_records, add_client, add_order, add_t_order, generate_qr
 
 
 logging.basicConfig(
@@ -313,8 +315,26 @@ def payment(update, context):
 def complete(update, context):
     user = update.message.from_user
     logger.info("User %s's birth_date is '%s'", user.first_name, update.message.text)
+    
     # TODO Подбить заказ и отправить в базу. context.user_data
+    # собрать context.user_data по соответствию типам    
+    context_data = {
+    'user_id': 706609141,
+    'current_warehouse': 'Склад Юг',
+    'current_season_stuff': 'Лыжи',
+    'current_season_stuff_number': 3,
+    'fio': 'Петров',
+    'phone': '9899898989',
+    'pass_id': '5555555555',
+    'birth_date': datetime.date(1995, 10, 25)
+    }
+    order_id = add_t_order(context_data)
+
     # TODO update.message.reply_photo() Выложить QR-код
+    img = generate_qr({'order_id': order_id, 'fio': context_data['fio']})
+    qr_name = os.path.join(os.getcwd(), 'qr', f'qr_{order_id}.png') 
+    img.save(qr_name)
+    update.message.reply_photo(open(qr_name, 'rb'))
     # TODO Задать переменные для периода start_date, finish_date
     reply_text = (
         'Спасибо за бронирование, оплата принята.\n'

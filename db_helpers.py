@@ -19,6 +19,7 @@ Clients = Base.classes.clients
 Storages = Base.classes.storages
 Prices = Base.classes.prices
 Orders = Base.classes.orders
+T_Orders = Base.classes.t_orders
 
 session = Session(engine)
 
@@ -65,15 +66,27 @@ def add_order(context_data):
     return new_order.id
 
 
+def add_t_order(context_data):
+    new_order = T_Orders(
+        user_id=context_data['user_id'],
+        current_warehouse=context_data['current_warehouse'],
+        current_season_stuff=context_data['current_season_stuff'],
+        current_season_stuff_number=context_data['current_season_stuff_number'],
+        fio=context_data['fio'],
+        phone=context_data['phone'],
+        pass_id=context_data['pass_id'],
+        birth_date=context_data['birth_date'],
+    )
+    session.add(new_order)
+    session.commit()
+    return new_order.id
+
+
 def generate_qr(context_data):
     text = (
-        f'{context_data["client_fio"]}.\n'
+        f'{context_data["fio"]}.\n'
         f'Заказ № {context_data["order_id"]}, '
-        f'от {context_data["order_date"]} '
-        f'"{context_data["order_title"]}"\n'
-        f'Аренда с {context_data["rent_to"]} по '
-        f'{context_data["order_date"]}\n'
-        f'Сгенерировано {datetime.now().strftime("%d.%m.%Y %H:%M:%S")}'
+        f'Сгенерировано {datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")}'
     )
     qr = qrcode.QRCode(version=1, box_size=6, border=3)
     qr.add_data(text)
