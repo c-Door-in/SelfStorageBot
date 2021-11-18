@@ -49,10 +49,13 @@ def start(update, context):
 
 
 def main_menu(update, context, reply_text='Вы в главном меню'):
+    reply_keyboard = [[]]
+    for warehouse in get_records(Warehouses):
+        reply_keyboard[0].append(warehouse.title)
     update.message.reply_text(
         reply_text,
         reply_markup=ReplyKeyboardMarkup(
-            [['Склад левый берег', 'Склад Юг', 'Склад Запад', 'Склад Север']],
+            reply_keyboard,
             resize_keyboard=True,
         ),
     )
@@ -64,7 +67,7 @@ def check_store(update, context):
     logger.info("User %s chooses %s as warehouse", user.first_name, update.message.text)
     for warehouse in get_records(Warehouses):
         if warehouse.title == update.message.text:
-            context.user_data['current_warehouse'] = update.message.text
+            context.user_data['warehouse_id'] = warehouse.id
             what_to_store(update, context)
             return WHAT_TO_STORE
     reply_text = 'Такого склада нет'
@@ -389,7 +392,6 @@ def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
-            # STORES, WHAT_TO_STORE, SEASON_STUFF, OTHER_STUFF, STORAGE_PERIOD
             STORES: [
                 MessageHandler(Filters.text, check_store),
             ],
