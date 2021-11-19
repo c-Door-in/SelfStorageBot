@@ -1,6 +1,9 @@
 import datetime
+import dateutil
 
 import qrcode
+
+from dateutil.relativedelta import *
 
 from sqlalchemy.engine import base
 from sqlalchemy.ext.automap import automap_base
@@ -68,6 +71,8 @@ def add_order(context_data):
 
 def add_t_order(context_data):
     new_order = T_Orders(
+        order_date=context_data['order_date'],
+        order_sum=context_data['order_sum'],
         user_id=context_data['user_id'],
         warehouse_id=context_data['warehouse_id'],
         warehouse_title=context_data['warehouse_title'],
@@ -77,6 +82,8 @@ def add_t_order(context_data):
         phone=context_data['phone'],
         pass_id=context_data['pass_id'],
         birth_date=context_data['birth_date'],
+        rent_from=context_data['rent_from'],
+        rent_to=context_data['rent_to']
     )
     session.add(new_order)
     session.commit()
@@ -93,20 +100,30 @@ def generate_qr(context_data):
     qr.add_data(text)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
-    # img.save(f'qr{context_data["order_id"]}.png')
     return img
 
 
-def make_date(period):
-    return('rent_from', 'rent_to')
+def make_dates(period):
+    p1, p2 = period.split(' ')
+    rent_from = datetime.datetime.now()
+    if 'месяц' in p2:
+        rent_to = rent_from + relativedelta(months=int(p1))
+        return(rent_from, rent_to)
+    elif 'недел' in p2:
+        rent_to = rent_from + relativedelta(weeks=int(p1))
+        return(rent_from, rent_to)
+    return(rent_from, rent_from) 
 
 
 def calc_payment(period, stuff, stuff_number):
-    return('1234')
-
-'''
-{'user_id': 706609141, 'warehouse_title': 'Склад левый берег', 
-'warehouse_id': 1, 'stuff': 'Сноуборд', 'stuff_number': '3',
-    'period': '2 месяца', 'fio': 'sdvdvewa', 'phone': '241242142', 
-    'pass_id': '213213213', 'birth_date': '12.09.2001'}
-'''
+    rent_from, rent_to = make_dates(period)
+    cost = 0
+    delta = relativedelta(rent_to, rent_from)
+    for row in get_records_sql(f'SELECT period, price FROM v_prices WHERE storage_title = "{stuff}"'):
+        if row['period'] == 'месяц':
+            cost = cost + row['price'] * delta.months
+        elif row['period'] == 'неделя':
+            cost = cost + row['price'] * delta.weeks
+        else:
+            cost = 0
+    return cost * stuff_number

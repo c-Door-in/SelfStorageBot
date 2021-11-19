@@ -13,7 +13,7 @@ from telegram.ext import (
 )
 
 from db_helpers import Warehouses, Boxes, Clients, Storages, Prices, Orders
-from db_helpers import get_records, add_client, add_order, add_t_order, generate_qr
+from db_helpers import get_records, get_records_sql, add_t_order, generate_qr, make_dates, calc_payment
 
 
 logging.basicConfig(
@@ -137,9 +137,15 @@ def confirm_season_stuff(update, context):
     context.user_data['stuff_number'] = update.message.text
     stuff = context.user_data['stuff']
     reply_text = (
-        f'Показывается стоимость для {stuff} '
-        f'количеством {update.message.text}.'
+        f'Стоимость для {stuff} '
+        f'количеством {update.message.text} составит:\n'
     )
+    for row in get_records_sql(f'SELECT title, period, price FROM v_prices WHERE storage_title = "{stuff}"'):
+        reply_text += (
+            f'"{row["title"]}" '
+            f'на период "{row["period"]}" '
+            f'{row["price"]} р.\n'
+        )
     update.message.reply_text(reply_text)
     storage_period(update, context)
     return STORAGE_PERIOD
@@ -174,6 +180,7 @@ def confirm_other_stuff(update, context):
     user = update.message.from_user
     logger.info("User %s chooses %s square meters to store", user.first_name, update.message.text)
     context.user_data['stuff_number'] = update.message.text
+    
     reply_text = (
         f'Показывается стоимость для {update.message.text} '
         f'квадратных метров в месяц.'
@@ -207,21 +214,28 @@ def summary_stuff(update, context):
         user = update.message.from_user
         logger.info("User %s chooses %s as storage period", user.first_name, update.message.text)
         context.user_data['period'] = update.message.text
+        rent_from, rent_to = make_dates(context.user_data['period'])
+        context.user_data['rent_from'] = rent_from
+        context.user_data['rent_to'] = rent_to
     stuff = context.user_data['stuff']
     stuff_number = context.user_data['stuff_number']
     period = context.user_data['period']
+    order_sum = calc_payment(period, stuff, int(stuff_number))
+    context.user_data['order_sum'] = order_sum
     warehouse_title = context.user_data['warehouse_title']
     if context.user_data['stuff'] == 'Другое':
         reply_text = (
             f'Вы бронируете {stuff_number} квадратных метров '
-            f'на складе {warehouse_title} на срок {period}.\n'
-            f'Стоимость ...'
+            f'на складе {warehouse_title} на срок {period}\n'
+            f'с {rent_from.strftime("%d.%m.%Y")} по {rent_to.strftime("%d.%m.%Y")}\n'
+            f'Стоимость составит {order_sum} р.'
         )
     else:
         reply_text = (
             f'Вы бронируете место под {stuff} в количестве {stuff_number} шт. '
-            f'на складе "{warehouse_title}" на срок - {period}.\n'
-            f'Стоимость ...'
+            f'на складе "{warehouse_title}" на срок - {period}\n'
+            f'с {rent_from.strftime("%d.%m.%Y")} по {rent_to.strftime("%d.%m.%Y")}\n'
+            f'Стоимость составит {order_sum} р.'
         )
     reply_keyboard = [
         ['Забронировать'],
@@ -321,7 +335,8 @@ def payment(update, context):
         user = update.message.from_user
         logger.info("User %s's birth_date is '%s'", user.first_name, update.message.text)
         context.user_data['birth_date'] = update.message.text
-    reply_text = 'К оплате ...'
+    order_sum = context.user_data['order_sum']
+    reply_text = f'К оплате {order_sum} р.'
     reply_keyboard = [
         ['Оплатить'],
         ['Назад', 'Главное меню'],
@@ -344,6 +359,8 @@ def complete(update, context):
     # собрать context.user_data по соответствию типам    
     birth_date = context.user_data['birth_date'].split('.')
     context_data = {
+    'order_date': datetime.datetime.now(),
+    'order_sum': 0,
     'user_id': user.id,
     'warehouse_id': context.user_data['warehouse_id'],
     'warehouse_title': context.user_data['warehouse_title'],
@@ -352,7 +369,9 @@ def complete(update, context):
     'fio': context.user_data['fio'],
     'phone': context.user_data['phone'],
     'pass_id': context.user_data['pass_id'],
-    'birth_date': datetime.date(int(birth_date[2]), int(birth_date[1]), int(birth_date[0]))
+    'birth_date': datetime.date(int(birth_date[2]), int(birth_date[1]), int(birth_date[0])),
+    'rent_from': context.user_data['rent_from'],
+    'rent_to': context.user_data['rent_to']
     }
     order_id = add_t_order(context_data)
 
