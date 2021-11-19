@@ -67,12 +67,12 @@ def add_order(context_data):
 
 
 def add_t_order(context_data):
-    # print(context_data)
     new_order = T_Orders(
         user_id=context_data['user_id'],
-        current_warehouse=context_data['current_warehouse'],
-        current_season_stuff=context_data['current_season_stuff'],
-        current_season_stuff_number=context_data['current_season_stuff_number'],
+        warehouse_id=context_data['warehouse_id'],
+        warehouse_title=context_data['warehouse_title'],
+        stuff=context_data['stuff'],
+        stuff_number=context_data['stuff_number'],
         fio=context_data['fio'],
         phone=context_data['phone'],
         pass_id=context_data['pass_id'],
@@ -95,3 +95,18 @@ def generate_qr(context_data):
     img = qr.make_image(fill_color="black", back_color="white")
     # img.save(f'qr{context_data["order_id"]}.png')
     return img
+
+
+def make_date(period):
+    return('rent_from', 'rent_to')
+
+
+def calc_payment(period, stuff, stuff_number):
+    return('1234')
+
+'''
+{'user_id': 706609141, 'warehouse_title': 'Склад левый берег', 
+'warehouse_id': 1, 'stuff': 'Сноуборд', 'stuff_number': '3',
+    'period': '2 месяца', 'fio': 'sdvdvewa', 'phone': '241242142', 
+    'pass_id': '213213213', 'birth_date': '12.09.2001'}
+'''

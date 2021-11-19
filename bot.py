@@ -345,9 +345,10 @@ def complete(update, context):
     birth_date = context.user_data['birth_date'].split('.')
     context_data = {
     'user_id': user.id,
-    'current_warehouse': context.user_data['warehouse_id'],
-    'current_season_stuff': context.user_data['stuff'],
-    'current_season_stuff_number': context.user_data['stuff_number'],
+    'warehouse_id': context.user_data['warehouse_id'],
+    'warehouse_title': context.user_data['warehouse_title'],
+    'stuff': context.user_data['stuff'],
+    'stuff_number': context.user_data['stuff_number'],
     'fio': context.user_data['fio'],
     'phone': context.user_data['phone'],
     'pass_id': context.user_data['pass_id'],
