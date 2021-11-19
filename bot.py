@@ -7,6 +7,9 @@ from telegram import (
     KeyboardButton,
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
+    LabeledPrice,
+    ShippingOption,
+    Update,
 )
 from telegram.ext import (
     Updater,
@@ -14,6 +17,9 @@ from telegram.ext import (
     ConversationHandler,
     CommandHandler,
     MessageHandler,
+    PreCheckoutQueryHandler,
+    CallbackContext,
+    ShippingQueryHandler,
 )
 
 from db_helpers import Warehouses, Boxes, Clients, Storages, Prices, Orders
@@ -52,7 +58,7 @@ def start(update, context):
     return STORES
 
 
-def main_menu(update, context, reply_text='Вы в главном меню'):
+def main_menu(update, context, reply_text='Выберите склад'):
     reply_keyboard = [[]]
     for warehouse in get_records(Warehouses):
         reply_keyboard[0].append(warehouse.title)
@@ -355,6 +361,29 @@ def payment(update, context):
     return PAYMENT
 
 
+def start_without_shipping_callback(update, context):
+    chat_id = update.message.chat_id
+    title = "Payment Example"
+    description = "Оплата заказа номер"
+    payload = "Custom-Payload"
+    provider_token = env('SBER_TEST_TOKEN')
+    currency = "RUB"
+    price = int(context.user_data['order_sum'])
+    prices = [LabeledPrice("Test", price * 100)]
+
+    context.bot.send_invoice(
+        chat_id, title, description, payload, provider_token, currency, prices
+    )
+
+
+def precheckout_callback(update, context):
+    query = update.pre_checkout_query
+    if query.invoice_payload != 'Custom-Payload':
+        query.answer(ok=False, error_message="Something went wrong...")
+    else:
+        query.answer(ok=True)
+
+
 def complete(update, context):
     user = update.message.from_user
     logger.info("User %s's birth_date is '%s'", user.first_name, update.message.text)
@@ -426,9 +455,6 @@ def exit(update, _):
 
 
 def main():
-    env = Env()
-    env.read_env()
-
     DEBUG = env.bool('DEBUG', False)
 
     TG_BOT_TOKEN = env('TG_BOT_TOKEN_WORK') if DEBUG else env('TG_BOT_TOKEN')
@@ -503,7 +529,7 @@ def main():
             PAYMENT: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
                 MessageHandler(Filters.regex('^Назад$'), personal_passport),
-                MessageHandler(Filters.regex('^Оплатить$'), complete),
+                MessageHandler(Filters.regex('^Оплатить$'), start_without_shipping_callback),
                 MessageHandler(Filters.text, incorrect_input),
             ],
             COMPLETE: [
@@ -519,9 +545,19 @@ def main():
 
     dispatcher.add_handler(conv_handler)
 
+    dispatcher.add_handler(CommandHandler("noshipping", start_without_shipping_callback))
+
+    # Pre-checkout handler to final check
+    dispatcher.add_handler(PreCheckoutQueryHandler(precheckout_callback))
+
+    # Success! Notify your user!
+    dispatcher.add_handler(MessageHandler(Filters.successful_payment, complete))
+
     updater.start_polling()
     updater.idle()
 
 
 if __name__ == '__main__':
+    env = Env()
+    env.read_env()
     main()
