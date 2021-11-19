@@ -67,7 +67,7 @@ def add_order(context_data):
 
 
 def add_t_order(context_data):
-    print(context_data)
+    # print(context_data)
     new_order = T_Orders(
         user_id=context_data['user_id'],
         current_warehouse=context_data['current_warehouse'],
