@@ -343,14 +343,14 @@ def complete(update, context):
     # TODO Подбить заказ и отправить в базу. context.user_data
     # собрать context.user_data по соответствию типам    
     context_data = {
-    'user_id': 706609141,
-    'current_warehouse': 'Склад Юг',
-    'current_season_stuff': 'Лыжи',
-    'current_season_stuff_number': 3,
-    'fio': 'Петров',
-    'phone': '9899898989',
-    'pass_id': '5555555555',
-    'birth_date': datetime.date(1995, 10, 25)
+    'user_id': user.id,
+    'current_warehouse': context.user_data['warehouse_id'],
+    'current_season_stuff': context.user_data['stuff'],
+    'current_season_stuff_number': context.user_data['stuff_number'],
+    'fio': context.user_data['fio'],
+    'phone': context.user_data['phone'],
+    'pass_id': context.user_data['pass_id'],
+    'birth_date': context.user_data['birth_date']
     }
     order_id = add_t_order(context_data)
 
