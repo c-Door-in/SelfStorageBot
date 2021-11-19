@@ -3,7 +3,11 @@ import logging
 import os
 
 from environs import Env
-from telegram import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram import (
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+)
 from telegram.ext import (
     Updater,
     Filters,
@@ -377,7 +381,7 @@ def complete(update, context):
 
     # TODO update.message.reply_photo() Выложить QR-код
     img = generate_qr({'order_id': order_id, 'fio': context_data['fio']})
-    qr_name = os.path.join(os.getcwd(), 'qr', f'qr_{order_id}.png') 
+    qr_name = os.path.join(os.getcwd(), 'qr', f'qr_{order_id}.png')
     img.save(qr_name)
     update.message.reply_photo(open(qr_name, 'rb'))
     # TODO Задать переменные для периода start_date, finish_date
@@ -459,7 +463,7 @@ def main():
             OTHER_STUFF: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
                 MessageHandler(Filters.regex('^Назад$'), what_to_store),
-                MessageHandler(Filters.regex('^([1-9]|10)$'), storage_period),
+                MessageHandler(Filters.regex('^([1-9]|10)$'), confirm_other_stuff),
             ],
             STORAGE_PERIOD: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
@@ -492,7 +496,7 @@ def main():
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
                 MessageHandler(Filters.regex('^Назад$'), personal_passport),
                 MessageHandler(
-                    Filters.regex('^(0?[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])(\.(20)?\d{2})?$'),
+                    Filters.regex('^(0?[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])(\.((19)|(20))?\d{2})?$'),
                     payment,
                 ),
             ],
