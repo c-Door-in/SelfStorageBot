@@ -342,6 +342,7 @@ def complete(update, context):
     
     # TODO Подбить заказ и отправить в базу. context.user_data
     # собрать context.user_data по соответствию типам    
+    birth_date = context.user_data['birth_date'].split('.')
     context_data = {
     'user_id': user.id,
     'current_warehouse': context.user_data['warehouse_id'],
@@ -350,7 +351,7 @@ def complete(update, context):
     'fio': context.user_data['fio'],
     'phone': context.user_data['phone'],
     'pass_id': context.user_data['pass_id'],
-    'birth_date': context.user_data['birth_date']
+    'birth_date': datetime.date(int(birth_date[2]), int(birth_date[1]), int(birth_date[0]))
     }
     order_id = add_t_order(context_data)
 
@@ -362,6 +363,7 @@ def complete(update, context):
     # TODO Задать переменные для периода start_date, finish_date
     reply_text = (
         'Спасибо за бронирование, оплата принята.\n'
+        f'Номер Вашего заказа #{order_id}. \n'
         'Вот ваш электронный ключ для доступа к вашему личному складу. '
         'Вы сможете попасть на склад в любое время в период с по'
     )
