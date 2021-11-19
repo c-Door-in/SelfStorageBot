@@ -67,6 +67,7 @@ def check_store(update, context):
     logger.info("User %s chooses %s as warehouse", user.first_name, update.message.text)
     for warehouse in get_records(Warehouses):
         if warehouse.title == update.message.text:
+            context.user_data['warehouse_title'] = update.message.text
             context.user_data['warehouse_id'] = warehouse.id
             what_to_store(update, context)
             return WHAT_TO_STORE
@@ -113,7 +114,7 @@ def season_stuff(update, context):
 
 def check_season_stuff(update, context):
     if update.message.text != 'Назад':
-        context.user_data['current_season_stuff'] = update.message.text
+        context.user_data['stuff'] = update.message.text
         user = update.message.from_user
         logger.info("User %s chooses %s to store", user.first_name, update.message.text)
     reply_text = 'Укажите количество'
@@ -133,10 +134,10 @@ def check_season_stuff(update, context):
 def confirm_season_stuff(update, context):
     user = update.message.from_user
     logger.info("User %s chooses %s things to store", user.first_name, update.message.text)
-    context.user_data['current_season_stuff_number'] = update.message.text
-    current_season_stuff = context.user_data['current_season_stuff']
+    context.user_data['stuff_number'] = update.message.text
+    stuff = context.user_data['stuff']
     reply_text = (
-        f'Показывается стоимость для {current_season_stuff} '
+        f'Показывается стоимость для {stuff} '
         f'количеством {update.message.text}.'
     )
     update.message.reply_text(reply_text)
@@ -146,7 +147,7 @@ def confirm_season_stuff(update, context):
 
 def other_stuff(update, context):
     if update.message.text != 'Назад':
-        context.user_data['other_stuff'] = True
+        context.user_data['stuff'] = 'Другое'
         user = update.message.from_user
         logger.info("User %s chooses some stuff to store", user.first_name)
     reply_text = (
@@ -155,6 +156,8 @@ def other_stuff(update, context):
         'Укажите площадь от 1 до 10 квадратных метров.'
     )
     reply_keyboard = [
+        ['1', '2', '3', '4', '5'],
+        ['6', '7', '8', '9', '10'],
         ['Назад', 'Главное меню'],
     ]
     update.message.reply_text(
@@ -167,26 +170,28 @@ def other_stuff(update, context):
     return OTHER_STUFF
 
 
-def storage_period(update, context):
-    if 'other_stuff' in context.user_data:
-        if update.message.text != 'Назад':
-            user = update.message.from_user
-            logger.info("User %s chooses %s things to store", user.first_name, update.message.text)
-            context.user_data['other_stuff_number'] = update.message.text
-        reply_text = (
-        'Выберете период хранения в месяцах'
+def confirm_other_stuff(update, context):
+    user = update.message.from_user
+    logger.info("User %s chooses %s square meters to store", user.first_name, update.message.text)
+    context.user_data['stuff_number'] = update.message.text
+    reply_text = (
+        f'Показывается стоимость для {update.message.text} '
+        f'квадратных метров в месяц.'
     )
-    else:
-        if update.message.text != 'Назад':
-            reply_text = (
-                'Выберете период хранения. '
-                'От 1 недели для лыж, сноуборда, велосипеда. '
-                'От 1 месяца для шин'
-            )
+    update.message.reply_text(reply_text)
+    storage_period(update, context)
+    return STORAGE_PERIOD
+
+
+def storage_period(update, context):
+    reply_text = 'Выберите период хранения'
     reply_keyboard = [
-        ['Календарь'],
+        ['1 месяц', '2 месяца', '3 месяца'],
+        ['4 месяца', '5 месяцев', '6 месяцев'],
         ['Назад', 'Главное меню'],
     ]
+    if context.user_data['stuff'] in ['Лыжи', 'Сноуборд', 'Велосипед']:
+        reply_keyboard.insert(0, ['1 неделя', '2 недели', '3 недели'])
     update.message.reply_text(
         reply_text,
         reply_markup=ReplyKeyboardMarkup(
@@ -201,7 +206,23 @@ def summary_stuff(update, context):
     if update.message.text != 'Назад':
         user = update.message.from_user
         logger.info("User %s chooses %s as storage period", user.first_name, update.message.text)
-    reply_text = 'Вы выбрали...'
+        context.user_data['period'] = update.message.text
+    stuff = context.user_data['stuff']
+    stuff_number = context.user_data['stuff_number']
+    period = context.user_data['period']
+    warehouse_title = context.user_data['warehouse_title']
+    if context.user_data['stuff'] == 'Другое':
+        reply_text = (
+            f'Вы бронируете {stuff_number} квадратных метров '
+            f'на складе {warehouse_title} на срок {period}.\n'
+            f'Стоимость ...'
+        )
+    else:
+        reply_text = (
+            f'Вы бронируете место под {stuff} в количестве {stuff_number} шт. '
+            f'на складе "{warehouse_title}" на срок - {period}.\n'
+            f'Стоимость ...'
+        )
     reply_keyboard = [
         ['Забронировать'],
         ['Назад', 'Главное меню'],
@@ -421,7 +442,7 @@ def main():
             STORAGE_PERIOD: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
                 MessageHandler(Filters.regex('^Назад$'), what_to_store),
-                MessageHandler(Filters.regex('^Календарь$'), summary_stuff),
+                MessageHandler(Filters.regex('^(1\s(месяц|неделя))|([2-6]\s(месяц(а|(ев)))|(недел[иь]))$'), summary_stuff),
                 MessageHandler(Filters.text, incorrect_input),
             ],
             SUMMARY_STUFF: [
@@ -448,7 +469,10 @@ def main():
             PERSONAL_BIRTHDATE: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
                 MessageHandler(Filters.regex('^Назад$'), personal_passport),
-                MessageHandler(Filters.text, payment),
+                MessageHandler(
+                    Filters.regex('^(0?[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])(\.(20)?\d{2})?$'),
+                    payment,
+                ),
             ],
             PAYMENT: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
