@@ -1,9 +1,9 @@
 import datetime
-# import dateutil
 
 import qrcode
 
 from dateutil.relativedelta import *
+from math import radians, cos, sin, asin, sqrt
 
 from sqlalchemy.engine import base
 from sqlalchemy.ext.automap import automap_base
@@ -145,3 +145,19 @@ def last_orders(user_id):
             f'склад {row["warehouse_title"]}, хранение {row["stuff"]}, мест {row["stuff_number"]}.\n'
         )
     return reply_text
+
+
+def calc_distance(lat1, lon1):
+    R = 6372.8
+    dist = {}
+    for warehouse in get_records(Warehouses):
+        lat2 = warehouse.latitude
+        lon2 = warehouse.longitude
+        dLat = radians(lat2 - lat1)
+        dLon = radians(lon2 - lon1)
+        lat_1 = radians(lat1)
+        lat_2 = radians(lat2)
+        a = sin(dLat/2)**2 + cos(lat_1)*cos(lat_2)*sin(dLon/2)**2
+        c = 2*asin(sqrt(a))
+        dist[f'{warehouse.title}, {warehouse.address}'] = round(R * c, 2)
+    return dict(sorted(dist.items(), key=lambda item: item[1], reverse=False))

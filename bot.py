@@ -30,7 +30,8 @@ from db_helpers import (
     generate_qr,
     make_dates,
     calc_payment,
-    last_orders
+    last_orders,
+    calc_distance,
 )
 
 logging.basicConfig(
@@ -58,7 +59,7 @@ def start(update, context):
     # else:
     reply_text = (
         'Привет! Я помогу вам арендовать личную ячейку '
-        'для хранения вещей. Давайте посмотрим адреса складов, '
+        'для хранения вещей. Можете отправить свою геопозицию, '
         'чтобы выбрать ближайший!'
     )
     main_menu(update, context, reply_text)
@@ -81,6 +82,7 @@ def main_menu(update, context, reply_text='Выберите склад'):
 
 def check_store(update, context):
     user = update.message.from_user
+    geolocation = update.message.location
     logger.info("User %s chooses %s as warehouse", user.first_name, update.message.text)
     for warehouse in get_records(Warehouses):
         if warehouse.title == update.message.text:
@@ -88,7 +90,16 @@ def check_store(update, context):
             context.user_data['warehouse_id'] = warehouse.id
             what_to_store(update, context)
             return WHAT_TO_STORE
-    reply_text = 'Такого склада нет'
+    if geolocation:
+        distances = calc_distance(
+            geolocation.latitude,
+            geolocation.longitude,
+            )
+        reply_text = 'Ближайшие склады:\n'
+        for warehous, dist in distances.items():
+            reply_text += f'{dist} {warehous}\n'
+    else:
+        reply_text = 'Такого склада нет, можете отправить свою геопозицию'
     main_menu(update, context, reply_text)
     # return STORES
 
@@ -495,6 +506,7 @@ def main():
         states={
             STORES: [
                 MessageHandler(Filters.text, check_store),
+                MessageHandler(Filters.location, check_store),
             ],
             WHAT_TO_STORE: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
