@@ -362,31 +362,37 @@ def payment(update, context):
 
 
 def start_without_shipping_callback(update, context):
+    user = update.message.from_user
     chat_id = update.message.chat_id
     title = "Payment Example"
     description = "Оплата заказа номер"
     payload = "Custom-Payload"
-    provider_token = env('SBER_TEST_TOKEN')
+    provider_token = SBER_TEST_TOKEN
     currency = "RUB"
     price = int(context.user_data['order_sum'])
     prices = [LabeledPrice("Test", price * 100)]
 
+    logger.info("User %s's starts payment callback", user.first_name)
+
     context.bot.send_invoice(
         chat_id, title, description, payload, provider_token, currency, prices
     )
+    return PAYMENT
 
 
 def precheckout_callback(update, context):
     query = update.pre_checkout_query
+    logger.info("Payload %s - precheckout_callback", query.invoice_payload)
     if query.invoice_payload != 'Custom-Payload':
         query.answer(ok=False, error_message="Something went wrong...")
     else:
         query.answer(ok=True)
+    return PAYMENT
 
 
 def complete(update, context):
     user = update.message.from_user
-    logger.info("User %s's birth_date is '%s'", user.first_name, update.message.text)
+    logger.info("User %s made a payment for %s rubles", user.first_name, context.user_data['order_sum'])
     
     # TODO Подбить заказ и отправить в базу. context.user_data
     # собрать context.user_data по соответствию типам    
@@ -455,8 +461,6 @@ def exit(update, _):
 
 
 def main():
-    DEBUG = env.bool('DEBUG', False)
-
     TG_BOT_TOKEN = env('TG_BOT_TOKEN_WORK') if DEBUG else env('TG_BOT_TOKEN')
 
     updater = Updater(token=TG_BOT_TOKEN)
@@ -530,6 +534,8 @@ def main():
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
                 MessageHandler(Filters.regex('^Назад$'), personal_passport),
                 MessageHandler(Filters.regex('^Оплатить$'), start_without_shipping_callback),
+                PreCheckoutQueryHandler(precheckout_callback),
+                MessageHandler(Filters.successful_payment, complete),
                 MessageHandler(Filters.text, incorrect_input),
             ],
             COMPLETE: [
@@ -545,13 +551,13 @@ def main():
 
     dispatcher.add_handler(conv_handler)
 
-    dispatcher.add_handler(CommandHandler("noshipping", start_without_shipping_callback))
+    # dispatcher.add_handler(CommandHandler("noshipping", start_without_shipping_callback))
 
     # Pre-checkout handler to final check
     dispatcher.add_handler(PreCheckoutQueryHandler(precheckout_callback))
 
-    # Success! Notify your user!
-    dispatcher.add_handler(MessageHandler(Filters.successful_payment, complete))
+    # # Success! Notify your user!
+    # dispatcher.add_handler(MessageHandler(Filters.successful_payment, complete))
 
     updater.start_polling()
     updater.idle()
@@ -560,4 +566,8 @@ def main():
 if __name__ == '__main__':
     env = Env()
     env.read_env()
+
+    DEBUG = env.bool('DEBUG', False)
+
+    SBER_TEST_TOKEN = env('SBER_TEST_TOKEN_WORK') if DEBUG else env('SBER_TEST_TOKEN')
     main()
