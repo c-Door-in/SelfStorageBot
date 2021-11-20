@@ -433,7 +433,9 @@ def complete(update, context):
     order_id = add_t_order(context_data)
     context.user_data['order_id'] = order_id
     img = generate_qr({'order_id': order_id, 'fio': context_data['fio']})
-    qr_name = os.path.join(os.getcwd(), 'qr', f'qr_{order_id}.png')
+    folder = os.path.join(os.getcwd(), "qr")
+    os.makedirs(folder, exist_ok=True)
+    qr_name = os.path.join(folder, f'qr_{order_id}.png')
     img.save(qr_name)
     update.message.reply_photo(open(qr_name, 'rb'))
     rent_from = context.user_data['rent_from'].strftime('%d.%m.%Y')
@@ -445,7 +447,7 @@ def complete(update, context):
         'Вот ваш электронный ключ для доступа к вашему личному складу. '
         'Вы сможете попасть на склад в любое время в '
         f'период с {rent_from} по {rent_to}\n'
-        'Ваши предыдущие 5 заказов:\n'
+        'Ваши предыдущие 3 заказа:\n'
     )
     reply_text += last_orders(user.id)
     reply_keyboard = [
