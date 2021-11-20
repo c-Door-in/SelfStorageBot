@@ -224,9 +224,9 @@ def summary_stuff(update, context):
         user = update.message.from_user
         logger.info("User %s chooses %s as storage period", user.first_name, update.message.text)
         context.user_data['period'] = update.message.text
-        rent_from, rent_to = make_dates(context.user_data['period'])
-        context.user_data['rent_from'] = rent_from
-        context.user_data['rent_to'] = rent_to
+    rent_from, rent_to = make_dates(context.user_data['period'])
+    context.user_data['rent_from'] = rent_from
+    context.user_data['rent_to'] = rent_to
     stuff = context.user_data['stuff']
     stuff_number = context.user_data['stuff_number']
     period = context.user_data['period']
