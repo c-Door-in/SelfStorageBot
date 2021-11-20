@@ -1,5 +1,5 @@
 import datetime
-import dateutil
+# import dateutil
 
 import qrcode
 
@@ -127,3 +127,21 @@ def calc_payment(period, stuff, stuff_number):
         else:
             cost = 0
     return cost * stuff_number
+
+
+def last_orders(user_id):
+    sql = (
+        "SELECT id, strftime('%d.%m.%Y', order_date) AS order_date, "
+        "order_sum, warehouse_title, stuff, stuff_number "
+        "FROM t_orders "
+        f"WHERE user_id = {user_id} "
+        "ORDER BY order_date DESC "
+        "LIMIT 5;"
+    )
+    reply_text = ''
+    for row in get_records_sql(sql):
+        reply_text += (
+            f'Заказ {row["id"]} от {row["order_date"]} на {row["order_sum"]}р., '
+            f'склад {row["warehouse_title"]}, хранение {row["stuff"]}, мест {row["stuff_number"]}.\n'
+        )
+    return reply_text

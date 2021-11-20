@@ -22,9 +22,16 @@ from telegram.ext import (
     ShippingQueryHandler,
 )
 
-from db_helpers import Warehouses, Boxes, Clients, Storages, Prices, Orders
-from db_helpers import get_records, get_records_sql, add_t_order, generate_qr, make_dates, calc_payment
-
+from db_helpers import (
+    Warehouses,
+    get_records,
+    get_records_sql,
+    add_t_order,
+    generate_qr,
+    make_dates,
+    calc_payment,
+    last_orders
+)
 
 logging.basicConfig(
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -109,7 +116,7 @@ def season_stuff(update, context):
     logger.info("User %s chooses season stuff", user.first_name)
     reply_text = 'Уточните'
     reply_keyboard = [
-        ['Лыжи', 'Сноуборд', 'Велосипед', 'Колеса'],
+        ['Лыжи', 'Сноуборд', 'Велосипед', 'Колёса'],
         ['Назад', 'Главное меню'],
     ]
     update.message.reply_text(
@@ -145,6 +152,7 @@ def confirm_season_stuff(update, context):
     user = update.message.from_user
     logger.info("User %s chooses %s things to store", user.first_name, update.message.text)
     context.user_data['stuff_number'] = update.message.text
+    stuff_number = int(update.message.text)
     stuff = context.user_data['stuff']
     reply_text = (
         f'Стоимость для {stuff} '
@@ -152,9 +160,9 @@ def confirm_season_stuff(update, context):
     )
     for row in get_records_sql(f'SELECT title, period, price FROM v_prices WHERE storage_title = "{stuff}"'):
         reply_text += (
-            f'"{row["title"]}" '
+            f'цена "{row["title"]}" '
             f'на период "{row["period"]}" '
-            f'{row["price"]} р.\n'
+            f'{row["price"]}р., {stuff_number} места {row["price"]*stuff_number}р.\n'
         )
     update.message.reply_text(reply_text)
     storage_period(update, context)
@@ -190,11 +198,24 @@ def confirm_other_stuff(update, context):
     user = update.message.from_user
     logger.info("User %s chooses %s square meters to store", user.first_name, update.message.text)
     context.user_data['stuff_number'] = update.message.text
-    
+    stuff = context.user_data['stuff']
+    stuff_number = int(update.message.text)
+    reply_text = (
+        f'Стоимость для "{stuff}"" '
+        f'{update.message.text} кв.м. составит:\n'
+    )
+    for row in get_records_sql(f'SELECT title, period, price FROM v_prices WHERE storage_title = "{stuff}"'):
+        reply_text += (
+            f'цена "{row["title"]}" '
+            f'на период "{row["period"]}" '
+            f'{row["price"]}р., {stuff_number} кв.м. {row["price"]*stuff_number}р.\n'
+        )
+    '''
     reply_text = (
         f'Показывается стоимость для {update.message.text} '
         f'квадратных метров в месяц.'
     )
+    '''
     update.message.reply_text(reply_text)
     storage_period(update, context)
     return STORAGE_PERIOD
@@ -393,13 +414,10 @@ def precheckout_callback(update, context):
 def complete(update, context):
     user = update.message.from_user
     logger.info("User %s made a payment for %s rubles", user.first_name, context.user_data['order_sum'])
-    
-    # TODO Подбить заказ и отправить в базу. context.user_data
-    # собрать context.user_data по соответствию типам    
     birth_date = context.user_data['birth_date'].split('.')
     context_data = {
     'order_date': datetime.datetime.now(),
-    'order_sum': 0,
+    'order_sum': context.user_data['order_sum'],
     'user_id': user.id,
     'warehouse_id': context.user_data['warehouse_id'],
     'warehouse_title': context.user_data['warehouse_title'],
@@ -413,19 +431,23 @@ def complete(update, context):
     'rent_to': context.user_data['rent_to']
     }
     order_id = add_t_order(context_data)
-
-    # TODO update.message.reply_photo() Выложить QR-код
+    context.user_data['order_id'] = order_id
     img = generate_qr({'order_id': order_id, 'fio': context_data['fio']})
     qr_name = os.path.join(os.getcwd(), 'qr', f'qr_{order_id}.png')
     img.save(qr_name)
     update.message.reply_photo(open(qr_name, 'rb'))
-    # TODO Задать переменные для периода start_date, finish_date
+    rent_from = context.user_data['rent_from'].strftime('%d.%m.%Y')
+    rent_to = context.user_data['rent_to'].strftime('%d.%m.%Y')
+
     reply_text = (
         'Спасибо за бронирование, оплата принята.\n'
         f'Номер Вашего заказа #{order_id}. \n'
         'Вот ваш электронный ключ для доступа к вашему личному складу. '
-        'Вы сможете попасть на склад в любое время в период с по'
+        'Вы сможете попасть на склад в любое время в '
+        f'период с {rent_from} по {rent_to}\n'
+        'Ваши предыдущие 5 заказов:\n'
     )
+    reply_text += last_orders(user.id)
     reply_keyboard = [
         ['Главное меню'],
     ]
@@ -482,7 +504,7 @@ def main():
             SEASON_STUFF: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
                 MessageHandler(Filters.regex('^Назад$'), what_to_store),
-                MessageHandler(Filters.regex('^Лыжи|Сноуборд|Велосипед|Колеса$'), check_season_stuff),
+                MessageHandler(Filters.regex('^Лыжи|Сноуборд|Велосипед|Колёса$'), check_season_stuff),
                 MessageHandler(Filters.text, incorrect_input),
             ],
             CHECK_SEASON_STUFF: [
@@ -534,6 +556,7 @@ def main():
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
                 MessageHandler(Filters.regex('^Назад$'), personal_passport),
                 MessageHandler(Filters.regex('^Оплатить$'), start_without_shipping_callback),
+                # MessageHandler(Filters.regex('^Оплатить$'), complete),
                 PreCheckoutQueryHandler(precheckout_callback),
                 MessageHandler(Filters.successful_payment, complete),
                 MessageHandler(Filters.text, incorrect_input),
