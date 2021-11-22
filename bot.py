@@ -64,7 +64,7 @@ def main_menu(update, context, reply_text='Выберите склад'):
     warehouses = []
     for warehouse in get_records(Warehouses):
         warehouses.append(warehouse.title)
-    reply_keyboard=warehouses
+    reply_keyboard=[warehouses]
     filter = {'user_id': context.user_data['user_id']}
     if get_records(T_Orders, filter):
         reply_keyboard=[
