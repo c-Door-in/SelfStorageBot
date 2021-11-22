@@ -470,7 +470,7 @@ def start_without_shipping_callback(update, context):
     title = "Payment Example"
     description = "Оплата заказа номер"
     payload = "Custom-Payload"
-    provider_token = SBER_TEST_TOKEN
+    provider_token = PROVIDER_TOKEN
     currency = "RUB"
     price = int(context.user_data['order_sum'])
     prices = [LabeledPrice("Test", price * 100)]
@@ -530,7 +530,6 @@ def complete(update, context):
         'Вы сможете попасть на склад в любое время в '
         f'период с {rent_from} по {rent_to}.'
     )
-    reply_text += last_orders(user.id)
     reply_keyboard = [
         ['Главное меню'],
     ]
@@ -677,5 +676,5 @@ if __name__ == '__main__':
 
     DEBUG = env.bool('DEBUG', False)
 
-    SBER_TEST_TOKEN = env('SBER_TEST_TOKEN_WORK') if DEBUG else env('SBER_TEST_TOKEN')
+    PROVIDER_TOKEN = env('PROVIDER_TOKEN_WORK') if DEBUG else env('PROVIDER_TOKEN')
     main()
