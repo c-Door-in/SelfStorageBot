@@ -399,34 +399,59 @@ def inline_kb_answer_callback_handler(update, context):
                                     reply_markup=key)
     elif result:
         query.message.reply_text(f"Вы выбрали {result}")
-
-        payment(update, context)
+        context.user_data['birth_date'] = result
+        bithdate_query_confirm(update, context)
         return PAYMENT
         
     return PERSONAL_BIRTHDATE
 
 
-def payment(update, context):
+def bithdate_query_confirm(update, context):
     query = update.callback_query
     query.answer()
-    if update.message:
-        if update.message.text != 'Назад':
-            user = update.message.from_user
-            logger.info("User %s's birth_date is '%s'", user.first_name, update.message.text)
-            context.user_data['birth_date'] = update.message.text
+    payment(update, context)
+    return PAYMENT
+
+
+def bithdate_message_confirm(update, context):
+    birth_date = update.message.text.split('.')
+    context.user_data['birth_date'] = date(
+                                        int(birth_date[2]),
+                                        int(birth_date[1]),
+                                        int(birth_date[0])
+                                    )
+    payment(update, context)
+    return PAYMENT
+
+
+def payment(update, context):
+    logger.info(
+        "Bithdate: %s; type - %s",
+        context.user_data['birth_date'],
+        type(context.user_data['birth_date'])
+    )
     order_sum = context.user_data['order_sum']
     reply_text = f'К оплате {order_sum} р.'
     reply_keyboard = [
         ['Оплатить'],
         ['Назад', 'Главное меню'],
     ]
-    query.message.reply_text(
-        reply_text,
-        reply_markup=ReplyKeyboardMarkup(
-            reply_keyboard,
-            resize_keyboard=True,
-        ),
-    )
+    if update.message:
+        update.message.reply_text(
+            reply_text,
+            reply_markup=ReplyKeyboardMarkup(
+                reply_keyboard,
+                resize_keyboard=True,
+            ),
+        )
+    elif update.callback_query:
+        update.callback_query.message.reply_text(
+            reply_text,
+            reply_markup=ReplyKeyboardMarkup(
+                reply_keyboard,
+                resize_keyboard=True,
+            ),
+        )
     return PAYMENT
 
 
@@ -462,7 +487,6 @@ def precheckout_callback(update, context):
 def complete(update, context):
     user = update.message.from_user
     logger.info("User %s made a payment for %s rubles", user.first_name, context.user_data['order_sum'])
-    birth_date = context.user_data['birth_date'].split('.')
     context_data = {
     'order_date': datetime.now(),
     'order_sum': context.user_data['order_sum'],
@@ -474,10 +498,11 @@ def complete(update, context):
     'fio': context.user_data['fio'],
     'phone': context.user_data['phone'],
     'pass_id': context.user_data['pass_id'],
-    'birth_date': date(int(birth_date[2]), int(birth_date[1]), int(birth_date[0])),
+    'birth_date': context.user_data['birth_date'],
     'rent_from': context.user_data['rent_from'],
     'rent_to': context.user_data['rent_to']
     }
+    logger.debug("Summary: %s", context_data)
     order_id = add_t_order(context_data)
     context.user_data['order_id'] = order_id
     img = generate_qr({'order_id': order_id, 'fio': context_data['fio']})
@@ -599,8 +624,8 @@ def main():
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
                 MessageHandler(Filters.regex('^Назад$'), personal_passport),
                 MessageHandler(
-                    Filters.regex('^(0?[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])(\.((19)|(20))?\d{2})?$'),
-                    payment,
+                    Filters.regex('^(0?[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])(\.((19)|(20))\d{2})?$'),
+                    bithdate_message_confirm,
                 ),
                 CallbackQueryHandler(inline_kb_answer_callback_handler, DetailedTelegramCalendar.func()),
             ],
