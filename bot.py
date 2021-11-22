@@ -1,9 +1,11 @@
-import datetime
+from datetime import date, datetime, timedelta
 import logging
 import os
 
 from environs import Env
 from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
     KeyboardButton,
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
@@ -20,7 +22,9 @@ from telegram.ext import (
     PreCheckoutQueryHandler,
     CallbackContext,
     ShippingQueryHandler,
+    CallbackQueryHandler,
 )
+from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 
 from db_helpers import Warehouses, Boxes, Clients, Storages, Prices, Orders
 from db_helpers import get_records, get_records_sql, add_t_order, generate_qr, make_dates, calc_payment
@@ -337,21 +341,54 @@ def personal_birthdate(update, context):
             input_field_placeholder='дд.мм.гггг',
         ),
     )
+    cal(update, context)
+    return PERSONAL_BIRTHDATE
+
+
+def cal(update, context):
+    calendar, step = DetailedTelegramCalendar().build()
+    logger.debug("calendar - %s, step - %s", calendar, step)
+    update.message.reply_text(
+                           f"Select {LSTEP[step]}",
+                           reply_markup=calendar
+                        )
+    return PERSONAL_BIRTHDATE
+
+
+def inline_kb_answer_callback_handler(update, context):
+    query = update.callback_query
+    query.answer()
+    logger.debug("query.data - %s", query.data)
+    year = timedelta(days=365)
+    date_18_years_ago = date.today() - (18 * year)
+    result, key, step = DetailedTelegramCalendar(max_date=date.today()).process(query.data)
+    if not result and key:
+        query.edit_message_text(f"Select {LSTEP[step]}",
+                                    reply_markup=key)
+    elif result:
+        query.message.reply_text(f"Вы выбрали {result}")
+
+        payment(update, context)
+        return PAYMENT
+        
     return PERSONAL_BIRTHDATE
 
 
 def payment(update, context):
-    if update.message.text != 'Назад':
-        user = update.message.from_user
-        logger.info("User %s's birth_date is '%s'", user.first_name, update.message.text)
-        context.user_data['birth_date'] = update.message.text
+    query = update.callback_query
+    query.answer()
+    if update.message:
+        if update.message.text != 'Назад':
+            user = update.message.from_user
+            logger.info("User %s's birth_date is '%s'", user.first_name, update.message.text)
+            context.user_data['birth_date'] = update.message.text
     order_sum = context.user_data['order_sum']
     reply_text = f'К оплате {order_sum} р.'
     reply_keyboard = [
         ['Оплатить'],
         ['Назад', 'Главное меню'],
     ]
-    update.message.reply_text(
+    query.message.reply_text(
         reply_text,
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard,
@@ -398,7 +435,7 @@ def complete(update, context):
     # собрать context.user_data по соответствию типам    
     birth_date = context.user_data['birth_date'].split('.')
     context_data = {
-    'order_date': datetime.datetime.now(),
+    'order_date': datetime.now(),
     'order_sum': 0,
     'user_id': user.id,
     'warehouse_id': context.user_data['warehouse_id'],
@@ -408,7 +445,7 @@ def complete(update, context):
     'fio': context.user_data['fio'],
     'phone': context.user_data['phone'],
     'pass_id': context.user_data['pass_id'],
-    'birth_date': datetime.date(int(birth_date[2]), int(birth_date[1]), int(birth_date[0])),
+    'birth_date': date(int(birth_date[2]), int(birth_date[1]), int(birth_date[0])),
     'rent_from': context.user_data['rent_from'],
     'rent_to': context.user_data['rent_to']
     }
@@ -529,10 +566,11 @@ def main():
                     Filters.regex('^(0?[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])(\.((19)|(20))?\d{2})?$'),
                     payment,
                 ),
+                CallbackQueryHandler(inline_kb_answer_callback_handler, DetailedTelegramCalendar.func()),
             ],
             PAYMENT: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
-                MessageHandler(Filters.regex('^Назад$'), personal_passport),
+                MessageHandler(Filters.regex('^Назад$'), personal_birthdate),
                 MessageHandler(Filters.regex('^Оплатить$'), start_without_shipping_callback),
                 PreCheckoutQueryHandler(precheckout_callback),
                 MessageHandler(Filters.successful_payment, complete),
@@ -555,9 +593,6 @@ def main():
 
     # Pre-checkout handler to final check
     dispatcher.add_handler(PreCheckoutQueryHandler(precheckout_callback))
-
-    # # Success! Notify your user!
-    # dispatcher.add_handler(MessageHandler(Filters.successful_payment, complete))
 
     updater.start_polling()
     updater.idle()
