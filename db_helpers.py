@@ -129,7 +129,7 @@ def calc_payment(period, stuff, stuff_number):
     return cost * stuff_number
 
 
-def last_orders(user_id):
+def get_last_orders(user_id):
     sql = (
         "SELECT id, strftime('%d.%m.%Y', order_date) AS order_date_, "
         "order_sum, warehouse_title, stuff, stuff_number "

@@ -4,14 +4,10 @@ import os
 
 from environs import Env
 from telegram import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    KeyboardButton,
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
     LabeledPrice,
-    ShippingOption,
-    Update,
+
 )
 from telegram.ext import (
     Updater,
@@ -20,21 +16,20 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     PreCheckoutQueryHandler,
-    CallbackContext,
-    ShippingQueryHandler,
     CallbackQueryHandler,
 )
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 
 from db_helpers import (
     Warehouses,
+    T_Orders,
     get_records,
     get_records_sql,
     add_t_order,
     generate_qr,
     make_dates,
     calc_payment,
-    last_orders,
+    get_last_orders,
     calc_distance,
 )
 
@@ -53,14 +48,9 @@ PAYMENT, COMPLETE = range(11, 13)
 
 
 def start(update, context):
-    # user = get_user(update.message.from_user.id)
     user = update.message.from_user
     context.user_data['user_id'] = user.id
     logger.info("User %s with id %s starts the bot", user.first_name, user.id)
-    # if user:
-    #     reply_text = 'Приветствую! Вы в главном меню.'
-    #     main_menu(update, context, reply_text)
-    # else:
     reply_text = (
         'Привет! Я помогу вам арендовать личную ячейку '
         'для хранения вещей. Можете отправить свою геопозицию, '
@@ -71,9 +61,17 @@ def start(update, context):
 
 
 def main_menu(update, context, reply_text='Выберите склад'):
-    reply_keyboard = [[]]
+    warehouses = []
     for warehouse in get_records(Warehouses):
-        reply_keyboard[0].append(warehouse.title)
+        warehouses.append(warehouse.title)
+    reply_keyboard=warehouses
+    filter = {'user_id': context.user_data['user_id']}
+    if get_records(T_Orders, filter):
+        reply_keyboard=[
+            warehouses,
+            ['Посмотреть предыдущие заказы']
+        ]
+    logger.info("keyboard: %s", reply_keyboard)
     update.message.reply_text(
         reply_text,
         reply_markup=ReplyKeyboardMarkup(
@@ -81,6 +79,15 @@ def main_menu(update, context, reply_text='Выберите склад'):
             resize_keyboard=True,
         ),
     )
+    return STORES
+
+
+def check_orders(update, context):
+    user = update.message.from_user
+    last_orders = get_last_orders(user.id)
+    'Ваши предыдущие 3 заказа:\n'
+    reply_text = f'Ваши предыдущие 3 заказа:\n {last_orders}'
+    main_menu(update, context, reply_text)
     return STORES
 
 
@@ -442,6 +449,7 @@ def payment(update, context):
             reply_markup=ReplyKeyboardMarkup(
                 reply_keyboard,
                 resize_keyboard=True,
+                input_field_placeholder='',
             ),
         )
     elif update.callback_query:
@@ -450,6 +458,7 @@ def payment(update, context):
             reply_markup=ReplyKeyboardMarkup(
                 reply_keyboard,
                 resize_keyboard=True,
+                input_field_placeholder='',
             ),
         )
     return PAYMENT
@@ -519,8 +528,7 @@ def complete(update, context):
         f'Номер Вашего заказа #{order_id}. \n'
         'Вот ваш электронный ключ для доступа к вашему личному складу. '
         'Вы сможете попасть на склад в любое время в '
-        f'период с {rent_from} по {rent_to}\n'
-        'Ваши предыдущие 3 заказа:\n'
+        f'период с {rent_from} по {rent_to}.'
     )
     reply_text += last_orders(user.id)
     reply_keyboard = [
@@ -533,7 +541,8 @@ def complete(update, context):
             resize_keyboard=True,
         ),
     )
-    return ConversationHandler.END
+    main_menu(update, context, reply_text)
+    return COMPLETE
 
 
 def incorrect_input(update, context):
@@ -567,8 +576,10 @@ def main():
         entry_points=[CommandHandler('start', start)],
         states={
             STORES: [
-                MessageHandler(Filters.text, check_store),
                 MessageHandler(Filters.location, check_store),
+                MessageHandler(Filters.regex('^Главное меню$'), main_menu),
+                MessageHandler(Filters.regex('^Посмотреть предыдущие заказы$'), check_orders),
+                MessageHandler(Filters.text, check_store),
             ],
             WHAT_TO_STORE: [
                 MessageHandler(Filters.regex('^Главное меню$'), main_menu),
